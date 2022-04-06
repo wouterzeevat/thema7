@@ -58,8 +58,6 @@ plotDensity(log2(counts + 0.1), col=rep(myColors, each=12),
             main='Expression Distribution')
 
 ## Add a legend and vertical line
-legend('topright', names(counts), lty=c(1:ncol(counts)),
-       col=rep(myColors, each=3))
 abline(v=-1.5, lwd=1, col='red', lty=2)
 ```
 This graph shows the expression distribution. There's a few ones sticking out but its mostly normal.
@@ -133,7 +131,7 @@ ggplot(mdsPoisData, aes(x_coord, y_coord, color = groups, label = coldata)) +
   labs(x = "Poisson Distance", y = "Poisson Distance") +
   theme_bw()
 ```
-This graph shows the outliers very well. In this case, there aren'y many that differ from the others too much. This is why i decided to not remove them as they can still be crusial to the result.
+This graph shows the outliers very well. In this case, there aren'y many that differ from the others too much. This is why i decided to not remove them as they can still be crucial to the result.
 
 ## Chapter 4
 ### 4.1 Preprocessing
@@ -143,3 +141,67 @@ This graph shows the outliers very well. In this case, there aren'y many that di
 counts.fpm <- log2( (counts / (colSums(counts) / 1e6)) + 1 )
 ```
 The data will now be normalized by calculating the FPM. 
+
+```{r}
+counts.filtered <-  counts.fpm[rowSums(counts.fpm != 0) > 0, ]
+counts <-  counts[rowSums(counts.fpm != 0) > 0, ]
+```
+I decided to remove the rows where all colums are 0.
+### 4.2 the fold change value
+```{R}
+counts.filtered$mean_ipsc_control <- rowMeans(counts.filtered[,ipsc_control])
+counts.filtered$mean_ipsc_dup <- rowMeans(counts.filtered[,ipsc_dup])
+counts.filtered$fold_change <- counts.filtered$mean_ipsc_dup - counts.filtered$mean_ipsc_control
+hist(counts.filtered$fold_change, breaks = 60, main="Log fold changes (IPSC control vs IPSC duplication")
+abline(v=-1, col="red")
+abline(v=1, col="red")
+
+```
+This graph shows that there's some outliers which means that there are probably some DEGs.
+
+### 4.3 Using Bioconductor Packages
+
+### 4.3.1 The design (matrix)
+```{r}
+library(DESeq2)
+
+(design <- model.matrix(~0 + group))
+colnames(design) <- levels(group)
+dds <- DESeqDataSetFromMatrix(countData = counts, colData = data.frame(group = group),
+                              design = ~ 0 + group)
+dds <- DESeq(dds, betaPrior = FALSE)
+rn <- resultsNames(dds)
+```
+
+### 4.3.2 DESeq
+```{r}
+result.1m_control_del = results(dds, contrast = c("group", "1M_Control", "1M_Del"), alpha = 0.05)
+result.1m_control_dup = results(dds, contrast = c("group", "1M_Control", "1M_Dup"), alpha = 0.05)
+result.1m_del_dup = results(dds, contrast = c("group", "1M_Del", "1M_Dup"), alpha = 0.05)
+```
+```{r}
+plotMA(result.1m_control_del)
+plotMA(result.1m_control_dup)
+plotMA(result.1m_del_dup)
+```
+
+### 5.1 Vulcano plot
+```{r}
+library("EnhancedVolcano")
+deseq.volcano <- function(res, datasetName) {
+  return(EnhancedVolcano(res, x = 'log2FoldChange', y = 'padj',
+                         lab=rownames(res),
+                         title = paste(datasetName, "trisomic vs disomic"),
+                         subtitle = bquote(italic('FDR <= 0.05 and absolute FC >= 2')),
+                         # Change text and icon sizes
+                         labSize = 3, pointSize = 1.5, axisLabSize=10, titleLabSize=12,
+                         subtitleLabSize=8, captionLabSize=10,
+                         # Disable legend
+                         legendPosition = "none",
+                         # Set cutoffs
+                         pCutoff = 0.05, FCcutoff = 2))
+}
+deseq.volcano(res = result.1m_control_del, datasetName = "IPSC control Del |")
+deseq.volcano(res = result.1m_control_dup, datasetName = "IPSC control Dup |")
+deseq.volcano(res = result.1m_del_dup, datasetName = "IPSC Del Dup |")
+```
