@@ -1,7 +1,7 @@
 ---
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -165,9 +165,9 @@ This graph shows that there's some outliers which means that there are probably 
 ```{r}
 library(DESeq2)
 
-(design <- model.matrix(~0 + group))
-colnames(design) <- levels(group)
-dds <- DESeqDataSetFromMatrix(countData = counts, colData = data.frame(group = group),
+(design <- model.matrix(~0 + groups))
+colnames(design) <- levels(groups)
+dds <- DESeqDataSetFromMatrix(countData = counts, colData = data.frame(group = groups),
                               design = ~ 0 + group)
 dds <- DESeq(dds, betaPrior = FALSE)
 rn <- resultsNames(dds)
@@ -175,14 +175,14 @@ rn <- resultsNames(dds)
 
 ### 4.3.2 DESeq
 ```{r}
-result.1m_control_del = results(dds, contrast = c("group", "1M_Control", "1M_Del"), alpha = 0.05)
-result.1m_control_dup = results(dds, contrast = c("group", "1M_Control", "1M_Dup"), alpha = 0.05)
-result.1m_del_dup = results(dds, contrast = c("group", "1M_Del", "1M_Dup"), alpha = 0.05)
+result.1m_control_del = results(dds, contrast = c("group", "1M_CONTROL", "1M_DEL"), alpha = 0.05)
+result.1m_control_dup = results(dds, contrast = c("group", "1M_CONTROL", "1M_DUP"), alpha = 0.05)
+result.1m_del_dup = results(dds, contrast = c("group", "1M_DEL", "1M_DUP"), alpha = 0.05)
 ```
 ```{r}
-plotMA(result.1m_control_del)
-plotMA(result.1m_control_dup)
-plotMA(result.1m_del_dup)
+DESeq2::plotMA(result.1m_control_del)
+DESeq2::plotMA(result.1m_control_dup)
+DESeq2::plotMA(result.1m_del_dup)
 ```
 
 ### 5.1 Vulcano plot
@@ -191,7 +191,7 @@ library("EnhancedVolcano")
 deseq.volcano <- function(res, datasetName) {
   return(EnhancedVolcano(res, x = 'log2FoldChange', y = 'padj',
                          lab=rownames(res),
-                         title = paste(datasetName, "trisomic vs disomic"),
+                         title = datasetName,
                          subtitle = bquote(italic('FDR <= 0.05 and absolute FC >= 2')),
                          # Change text and icon sizes
                          labSize = 3, pointSize = 1.5, axisLabSize=10, titleLabSize=12,
@@ -199,9 +199,20 @@ deseq.volcano <- function(res, datasetName) {
                          # Disable legend
                          legendPosition = "none",
                          # Set cutoffs
-                         pCutoff = 0.05, FCcutoff = 2))
+                         pCutoff = 0.05, FCcutoff = 2, col=c("#ACDEFF", "#4492FC", "#ACDEFF", "#4492FC")))
 }
-deseq.volcano(res = result.1m_control_del, datasetName = "IPSC control Del |")
-deseq.volcano(res = result.1m_control_dup, datasetName = "IPSC control Dup |")
-deseq.volcano(res = result.1m_del_dup, datasetName = "IPSC Del Dup |")
+deseq.volcano(res = result.1m_control_del, datasetName = "Control vs Del")
+deseq.volcano(res = result.1m_control_dup, datasetName = "Control vs Dup")
+deseq.volcano(res = result.1m_del_dup, datasetName = "Control vs Dup")
+```
+# 5.2 Venn diagram
+```{r}
+library("gplots")
+library("VennDiagram")
+pval_threshold <- 0.05
+one.m.cde <- row.names(result.1m_control_del[which(result.1m_control_del$padj <= pval_threshold), ])
+one.m.cdu <- row.names(result.1m_control_dup[which(result.1m_control_dup$padj <= pval_threshold), ])
+one.m.dedu <- row.names(result.1m_del_dup[which(result.1m_del_dup$padj <= pval_threshold), ])
+library(ggvenn)
+ggvenn(list("Control Del"=one.m.cde, "Control Dup"=one.m.cdu, "Del Dup"=one.m.dedu), fill_color = c("#ACDEFF", "#4492FC", "#91A5BD"), stroke_size = 0.0)
 ```
