@@ -99,6 +99,7 @@ pheatmap(sampleDistMatrix, show_colnames = FALSE,
          clustering_distance_cols = sampledists,
          main = "Euclidean Sample Distances")
 ```
+This graph looks fine, no exceptional values, meaning the data doesnt need to be changed that much.
 Like in the example, the samples are clustered together pretty well. 
 
 ### 3.4.4 Multi-Dimensional Scaling
@@ -184,6 +185,7 @@ DESeq2::plotMA(result.1m_control_del)
 DESeq2::plotMA(result.1m_control_dup)
 DESeq2::plotMA(result.1m_del_dup)
 ```
+In the first two graphs, the log fold values range from -2 to +2. The last graph of the DUP vs DEL ranges from -3 to +3 meaning that the increased expression is higher there.
 
 ### 5.1 Vulcano plot
 ```{r}
@@ -203,8 +205,9 @@ deseq.volcano <- function(res, datasetName) {
 }
 deseq.volcano(res = result.1m_control_del, datasetName = "Control vs Del")
 deseq.volcano(res = result.1m_control_dup, datasetName = "Control vs Dup")
-deseq.volcano(res = result.1m_del_dup, datasetName = "Control vs Dup")
+deseq.volcano(res = result.1m_del_dup, datasetName = "Del vs Dup")
 ```
+These graphs show the DEGS of the data. What stands out is that the control vs dup has way less DEGS than the other two graphs. The control vs del one also has way more extreme DEGS, having more DEGS than the del vs dup one.
 # 5.2 Venn diagram
 ```{r}
 library("gplots")
@@ -216,3 +219,4 @@ one.m.dedu <- row.names(result.1m_del_dup[which(result.1m_del_dup$padj <= pval_t
 library(ggvenn)
 ggvenn(list("Control Del"=one.m.cde, "Control Dup"=one.m.cdu, "Del Dup"=one.m.dedu), fill_color = c("#ACDEFF", "#4492FC", "#91A5BD"), stroke_size = 0.0)
 ```
+The last graph shows the DEGS of each comparison. Like the previous graph said. The ones having the Del group in it consist of way more DEGS. The article said that the Del group was mostly connected to having autism. Which this graph confirms.
